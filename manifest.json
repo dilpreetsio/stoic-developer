@@ -19,7 +19,7 @@
 
   "web_accessible_resources": [
     {
-      "resources": [ "index.js" ],
+      "resources": [ "index.js", "src/*" ],
       "matches": [ "https:\/\/*/*" ]
     }
   ],

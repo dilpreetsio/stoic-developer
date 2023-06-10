@@ -1,250 +1,627 @@
+// Constants
 const LAST_DATE = "LAST_DATE",
-    QUOTE = "QUOTE",
-    IMAGE = "IMAGE",
-    DOB = "DOB",COLLECTION_ID = 583204,
-    DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000,
-    DAY = "day",
-    WEEK = "week",
-    MONTH = "month",
-    YEAR = "year"
+  QUOTE = "QUOTE",
+  IMAGE = "IMAGE",
+  DOB = "DOB",
+  COLLECTION_ID = 583204, // unsplash collection id
+  DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000,
+  DAY = "day",
+  WEEK = "week",
+  MONTH = "month",
+  YEAR = "year",
+  WAKA = "wakatime",
+  WAKA_TOGGLE = "wake_toggle",
+  TIMELINE = "timeline",
+  MEMENTO_MORI = "memento_mori",
+  GITHUB = "github",
+  GITHUB_TOGGLE = "github_toggle";
 
-let currentQuote = localStorage.getItem(QUOTE),
-    currentImage = localStorage.getItem(IMAGE),
-    currentDate = localStorage.getItem(LAST_DATE),
-    dob = localStorage.getItem(DOB) || "1994-07-06"
+const WIDGET_DATA = [
+  {
+    name: "Wakatime",
+    key: WAKA_TOGGLE,
+    type: "toggle",
+    valueKey: WAKA,
+    inputType: "text",
+    placeholder: "Wakatime url",
+    info: "Get your embeddable link here",
+    url: "https://wakatime.com/share/embed",
+  },
+  {
+    name: "Github",
+    key: GITHUB_TOGGLE,
+    valueKey: GITHUB,
+    type: "toggle",
+    inputType: "text",
+    placeholder: "Github username",
+  },
+  {
+    name: "Memento Mori",
+    key: MEMENTO_MORI,
+    type: "toggle",
+    inputType: "date",
+    placeholder: "Date of birth in YYYY-MM-DD format",
+    valueKey: DOB,
+  },
+  {
+    name: "Timeline",
+    key: TIMELINE,
+    type: "toggle",
+  },
+];
 
-const isSameDate = (oldDate, newDate) => {
-    return (oldDate.getDate() == newDate.getDate() &&
-        oldDate.getMonth() == newDate.getMonth() &&
-        oldDate.getFullYear() == newDate.getFullYear())
-}
+// store management
+const store = {
+  init: async () => {
+    updateAppState();
+  },
+  get: (key) => {
+    return localStorage.getItem(key);
+  },
+  set: (key, value) => {
+    localStorage.setItem(key, value);
+  },
+};
 
-const getAgeFromDOB = birthDate => Math.floor((new Date() - new Date(birthDate).getTime()) / 3.15576e+10)
+let currentQuote = store.get(QUOTE),
+  currentImage = localStorage.getItem(IMAGE),
+  currentDate = localStorage.getItem(LAST_DATE),
+  dob = localStorage.getItem(DOB) || "1994-07-06";
 
-const addTimeline = (type) => {
-    let element = document.getElementById(`${type}-capsule`),
-        percentageLabel = element.parentNode.querySelectorAll(".percentage-label") ,
-        timePassed = document.createElement("div"),
-        date = new Date(),
-        lastDate = new Date(Date.parse(currentDate)),
-        timePassedPercentage = 0;
-
-    // set time to midnight
-    lastDate.setHours(0)
-    lastDate.setMinutes(0)
-    lastDate.setSeconds(0)
-
-    if (type === DAY) {
-        timePassedPercentage = (date.getTime() - lastDate.getTime()) / DAY_IN_MILLISECONDS
-    } else if (type === WEEK) {
-        const lastMonday = new Date()
-
-        if (lastMonday.getDay() !== 1)
-            lastMonday.setDate(lastMonday.getDate() - (lastMonday.getDay() + 6) % 7);
-
-        lastMonday.setHours(0)
-        lastMonday.setMinutes(0)
-        lastMonday.setSeconds(0)
-
-        timePassedPercentage = (date.getTime() - lastMonday.getTime()) / (DAY_IN_MILLISECONDS * 7)
-
-    } else if (type === MONTH) {
-        lastDate.setDate(0)
-        timePassedPercentage = (date.getDate()/lastDate.getDate())
-    } else if (type === YEAR) {
-        const firstDayOfYear = new Date(lastDate.getFullYear(), 0, 1)
-        const numberOfDays = new Date(lastDate.getFullYear(), 1, 29).getDate() === 29 ? 366 : 365;
-
-        timePassedPercentage = ((date.getTime() - firstDayOfYear.getTime())/ DAY_IN_MILLISECONDS) / numberOfDays
-
-    }
-
-
-    percentageLabel[0].innerHTML = `${parseInt(timePassedPercentage*100)}%`
-    timePassed.className = `time-capsule-overlay`
-    timePassed.style.width = `${Math.min(100, parseInt(timePassedPercentage * 100))}%`
-    element.innerHTML = ""
-    element.appendChild(timePassed)
-}
-
-
-const createTimelineComponent = (type) => {
-    let timelineElement = document.createElement("div")
-    timelineElement.id = `timeline-${type}`
-    let timelineHeader = document.createElement("div"),
-        timeCapsule = document.createElement("div"),
-        headerName = document.createElement("span"),
-        percentageLabel = document.createElement("span")
-
-    headerName.innerHTML = type === DAY ? "Today" : `This ${type}`
-    percentageLabel.className = "percentage-label"
-    timeCapsule.className = "time-capsule"
-    timeCapsule.id = `${type}-capsule`
-
-
-    timelineHeader.appendChild(headerName)
-    timelineHeader.appendChild(percentageLabel)
-    timelineElement.appendChild(timelineHeader)
-    timelineElement.appendChild(timeCapsule)
-
-    return timelineElement
-}
-
-const store =  {
-    init: async () => {
-        let lastDate = localStorage.getItem(LAST_DATE),
-            quote = localStorage.getItem(QUOTE),
-            image = localStorage.getItem(IMAGE)
-        if ((!lastDate || !quote || !image) || (!isSameDate(new Date(), new Date(Date.parse(lastDate))))) {
-            const newQuote = await fetchQuote()
-            const newImage = await fetchImage()
-            currentQuote = newQuote
-            currentImage = newImage
-            currentDate = new Date()
-            localStorage.setItem(QUOTE, JSON.stringify(newQuote))
-            localStorage.setItem(IMAGE, newImage)
-            localStorage.setItem(LAST_DATE, new Date())
-        }
-    },
-    get: (name) => {
-        return localStorage.getItem(name)
-    }
-}
-
-const fetchQuote = async () => {
-    let quote = await fetch("https://stoicquotesapi.com/v1/api/quotes/random").then(res => res.json())
-    return quote
-}
-
+// functions
 const fetchImage = async () => {
-    let image = await fetch(`https://source.unsplash.com/collection/${COLLECTION_ID}/1920x1080/?sig=${Math.random()}`)
-    return image.url
-}
+  let image;
+
+  try {
+    image = await fetch(
+      `https://source.unsplash.com/collection/${COLLECTION_ID}/1920x1080/?sig=${Math.random()}`
+    );
+  } catch (e) {
+    console.log(e);
+  }
+  return image.url;
+};
+
+// alternative source of quotes https://stoic-quotes.com/api/quote
+const fetchQuote = async () => {
+  let quote = {};
+  try {
+    quote = await fetch("https://api.themotivate365.com/stoic-quote").then(
+      (res) => res.json()
+    );
+  } catch (e) {
+    console.log(e);
+  }
+
+  return quote;
+};
 
 const renderTime = () => {
-    setInterval(() => {
-        const lastDate = new Date(Date.parse(currentDate)),
-            today = new Date()
+  setInterval(() => {
+    updateAppState();
+    addTimeline(DAY);
+    addTimeline(WEEK);
+    addTimeline(MONTH);
+    addTimeline(YEAR);
+    document.getElementById("time").innerHTML =
+      time.innerHTML = `${new Date().toLocaleString("en-US", {
+        hour: "numeric",
+        minute: "numeric",
+        hour12: true,
+      })}`;
+  }, 1000);
+};
 
-        if (lastDate.getDate() !== today.getDate()) {
-            localStorage.setItem(LAST_DATE, new Date())
-            currentDate = new Date()
-        }
-        addTimeline(DAY)
-        addTimeline(WEEK)
-        addTimeline(MONTH)
-        addTimeline(YEAR)
-        document.getElementById("time").innerHTML = time.innerHTML = `${(new Date()).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}`
-    }, 1000)
-}
+const isSameDate = (oldDate, newDate) => {
+  return (
+    oldDate.getDate() == newDate.getDate() &&
+    oldDate.getMonth() == newDate.getMonth() &&
+    oldDate.getFullYear() == newDate.getFullYear()
+  );
+};
 
-const App = {
-    renderApp: async () => {
-        const quoteData = JSON.parse(currentQuote)
+const getAbsoluteAgeFromDOB = (birthDate) =>
+  Math.floor(new Date() - new Date(birthDate).getTime());
 
-        const bg = document.createElement("div")
-        bg.id = "bg"
-        let bgImage = document.createElement("img")
-        let bgOverlay = document.createElement("div")
-        bgImage.id = "bg-image"
-        bgOverlay.id = "bg-overlay"
-        bgImage.src = currentImage
-        bg.appendChild(bgOverlay)
-        bg.appendChild(bgImage)
+const getAgeFromDOB = (birthDate) =>
+  getAbsoluteAgeFromDOB(birthDate) / 3.15576e10;
 
-        let app = document.getElementById("app")
-        let quoteContainer = document.createElement("div")
-        quoteContainer.id = "quote-container"
-        let time = document.createElement("h1")
-        time.id = "time"
-        let quote = document.createElement("h2")
-        quote.id = "quote"
-        let author = document.createElement("h3")
-        author.id = "author"
-        time.innerHTML = `${(new Date()).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}`
-        quote.innerHTML = `"${quoteData.body}"`
-        author.innerHTML = `${quoteData.author}`
-        quoteContainer.appendChild(time)
-        quoteContainer.appendChild(quote)
-        quoteContainer.appendChild(author)
+const isStoreValueTrue = (key) => {
+  return store.get(key) === "true";
+};
 
-        let widgetContainer = document.createElement("div")
-        widgetContainer.id = "widget-container"
+// timeline functions
+const addTimeline = (type) => {
+  if (!isStoreValueTrue(TIMELINE)) {
+    return;
+  }
+  let element = document.getElementById(`${type}-capsule`),
+    percentageLabel = element.parentNode.querySelectorAll(".percentage-label"),
+    timePassed = document.createElement("div"),
+    date = new Date(),
+    lastDate = new Date(Date.parse(currentDate)),
+    timePassedPercentage = 0;
 
-        let wakaWidget = document.createElement("img")
-        wakaWidget.id = "waka-widget"
-        wakaWidget.src = "https://wakatime.com/share/@016631ad-8be2-449f-9adb-1e631d3f5143/a0cc7c87-4db2-4719-82a9-3c7e851fbfd5.svg"
+  // set time to midnight
+  lastDate.setHours(0);
+  lastDate.setMinutes(0);
+  lastDate.setSeconds(0);
 
-        let sideWidgetContainer = document.createElement("div")
-        sideWidgetContainer.id = "side-widget-container"
+  if (type === DAY) {
+    let today = new Date();
+    today.setHours(0);
+    today.setMinutes(0);
+    today.setSeconds(0);
+    timePassedPercentage =
+      (date.getTime() - today.getTime()) / DAY_IN_MILLISECONDS;
+  } else if (type === WEEK) {
+    const lastMonday = new Date();
 
-        let githubChart = document.createElement("img")
-        githubChart.id = "github-img"
-        githubChart.src = "http://ghchart.rshah.org/dilpreetsio"
+    if (lastMonday.getDay() !== 1)
+      lastMonday.setDate(
+        lastMonday.getDate() - ((lastMonday.getDay() + 6) % 7)
+      );
 
-        //memento mori generator
-        let timeContainer = document.createElement("div")
-        timeContainer.id = "time-container"
+    lastMonday.setHours(0);
+    lastMonday.setMinutes(0);
+    lastMonday.setSeconds(0);
 
-        let mementoMori = document.createElement("div")
-        mementoMori.id = "memento-mori"
-        let mementoMoriHeader = document.createElement("div")
-        mementoMoriHeader.innerHTML = "Memento mori"
-        mementoMoriHeader.id = "memento-mori-header"
-        mementoMori.appendChild(mementoMoriHeader)
+    timePassedPercentage =
+      (date.getTime() - lastMonday.getTime()) / (DAY_IN_MILLISECONDS * 7);
+  } else if (type === MONTH) {
+    lastDate.setDate(1);
+    lastDate.setMonth(lastDate.getMonth() + 1);
+    lastDate.setDate(0);
+    lastDate.setHours(23);
+    lastDate.setMinutes(59);
+    lastDate.setSeconds(59);
 
-        const age = getAgeFromDOB(dob)
+    const firstDay = new Date(currentDate);
+    firstDay.setDate(1);
 
-        for(let i=0;i<9;i++) {
-            const yearLine = document.createElement("div")
-            yearLine.className = "year-line"
-            for(let j=0;j<10;j++) {
-                const yearElement = document.createElement("div")
-                let year = i * 10 + j;
+    const timePassed = date.getTime() - firstDay.getTime();
+    const timeInMonth = lastDate.getTime() - firstDay.getTime();
+    timePassedPercentage = timePassed / timeInMonth;
+  } else if (type === YEAR) {
+    const firstDayOfYear = new Date(lastDate.getFullYear(), 0, 1);
+    const numberOfDays =
+      new Date(lastDate.getFullYear(), 1, 29).getDate() === 29 ? 366 : 365;
 
-                if (year < age) {
-                    yearElement.className = "year dot-fill"
-                } else {
-                    yearElement.className = "year dot-outline"
+    timePassedPercentage =
+      (date.getTime() - firstDayOfYear.getTime()) /
+      DAY_IN_MILLISECONDS /
+      numberOfDays;
+  }
+  timePassedPercentage = timePassedPercentage % 100;
+  percentageLabel[0].innerHTML = `${parseInt(timePassedPercentage * 100)}%`;
+  timePassed.className = `time-capsule-overlay`;
+  timePassed.style.width = `${Math.min(
+    100,
+    parseInt(timePassedPercentage * 100)
+  )}%`;
+  element.innerHTML = "";
+  element.appendChild(timePassed);
+};
 
-                }
-                yearLine.appendChild(yearElement)
-            }
-            mementoMori.appendChild(yearLine)
-        }
+// state management
+const updateAppState = async () => {
+  let lastDate = store.get(LAST_DATE),
+    quote = store.get(QUOTE),
+    image = store.get(IMAGE);
 
-        //timeline monitor
-        let timeline = document.createElement("div")
-        timeline.id = "timeline"
+  if (
+    !lastDate ||
+    !quote ||
+    quote.toString() == "{}" ||
+    !image ||
+    !isSameDate(new Date(), new Date(Date.parse(lastDate)))
+  ) {
+    const newQuote = await fetchQuote();
+    const newImage = await fetchImage();
 
-        //individual times
-        const timelineDay = createTimelineComponent(DAY),
-        timelineWeek = createTimelineComponent(WEEK),
-        timelineMonth = createTimelineComponent(MONTH),
-        timelineYear = createTimelineComponent(YEAR)
+    currentQuote = newQuote;
+    currentImage = newImage;
+    currentDate = new Date();
+    store.set(QUOTE, JSON.stringify(newQuote));
+    store.set(IMAGE, newImage);
+    store.set(LAST_DATE, new Date());
+  }
+};
 
-        timeline.appendChild(timelineDay)
-        timeline.appendChild(timelineWeek)
-        timeline.appendChild(timelineMonth)
-        timeline.appendChild(timelineYear)
+const EventHandler = {
+  handleSettingsClick: (e) => {
+    const settingsPanel = document.getElementById("settings");
 
-        timeContainer.appendChild(mementoMori)
-        timeContainer.appendChild(timeline)
-        widgetContainer.appendChild(wakaWidget)
-        sideWidgetContainer.appendChild(githubChart)
-        sideWidgetContainer.appendChild(timeContainer)
-        widgetContainer.appendChild(sideWidgetContainer)
-
-        app.appendChild(bg)
-        app.appendChild(widgetContainer)
-        app.appendChild(quoteContainer)
-        renderTime()
+    if (settingsPanel) {
+      settingsPanel.remove();
+    } else {
+      App.renderSettings();
     }
-}
+  },
+  handleToggleChange: (e) => {
+    const key = e.currentTarget.id;
+    const value = e.currentTarget.checked;
+    const settingData = WIDGET_DATA.find((item) => item.key === key);
+    store.set(key, value);
 
-const init =() => {
-    store.init()
-    App.renderApp()
-}
-init()
+    if (value) {
+      if (settingData.placeholder && settingData.valueKey)
+        DomKeeper.addInputComponent(settingData);
+      App.renderComponentByKey(settingData.valueKey || settingData.key);
+    } else {
+      if (settingData.placeholder)
+        DomKeeper.removeElementById(`${settingData.valueKey}_input`);
+      DomKeeper.removeElementById(settingData.valueKey || settingData.key);
+    }
+  },
+  handleSaveClick: (e) => {
+    const key = e.currentTarget.id.split("_")[0];
+    const inputValue = document.getElementById(`${key}_value`).value;
 
+    store.set(key, inputValue);
+  },
+};
+
+const DomKeeper = {
+  addInputComponent: (settingData) => {
+    const elementContainer = document.getElementById(
+        `${settingData.key}_toggle`
+      ),
+      inputContainer = ComponenetCreator.createInputComponent(settingData);
+    elementContainer.appendChild(inputContainer);
+  },
+  removeElementById: (key) => {
+    const element = document.getElementById(key);
+    element.remove();
+  },
+  updateApp: () => {},
+};
+
+// Create dom components
+const ComponenetCreator = {
+  createTimeLineComponent: () => {
+    if (!isStoreValueTrue(TIMELINE)) {
+      return;
+    }
+
+    let timeline = document.createElement("div"),
+      timelineData = [DAY, WEEK, MONTH, YEAR];
+    timeline.id = TIMELINE;
+    timeline.className = "timeline";
+
+    timelineData.forEach((type) => {
+      let timelineElement = document.createElement("div");
+      timelineElement.id = `timeline-${type}`;
+      let timelineHeader = document.createElement("div"),
+        timeCapsule = document.createElement("div"),
+        headerName = document.createElement("span"),
+        percentageLabel = document.createElement("span");
+
+      headerName.innerHTML = type === DAY ? "Today" : `This ${type}`;
+      percentageLabel.className = "percentage-label";
+      timeCapsule.className = "time-capsule";
+      timeCapsule.id = `${type}-capsule`;
+
+      timelineHeader.appendChild(headerName);
+      timelineHeader.appendChild(percentageLabel);
+      timelineElement.appendChild(timelineHeader);
+      timelineElement.appendChild(timeCapsule);
+
+      timeline.appendChild(timelineElement);
+    });
+
+    return timeline;
+  },
+  createBgImageComponent: () => {
+    const bg = document.createElement("div");
+    bg.id = "bg";
+    let bgImage = document.createElement("img");
+    let bgOverlay = document.createElement("div");
+    bgImage.id = "bg-image";
+    bgOverlay.id = "bg-overlay";
+    bgImage.src = currentImage;
+    bg.appendChild(bgOverlay);
+    bg.appendChild(bgImage);
+
+    return bg;
+  },
+  createQuoteComponent: () => {
+    const quoteData = JSON.parse(currentQuote);
+
+    let quoteContainer = document.createElement("div");
+    quoteContainer.id = "quote-container";
+    let time = document.createElement("h1");
+    time.id = "time";
+    let quote = document.createElement("h2");
+    quote.id = "quote";
+    let author = document.createElement("h3");
+    author.id = "author";
+    time.innerHTML = `${new Date().toLocaleString("en-US", {
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    })}`;
+    quote.innerHTML = `"${quoteData.quote}"`;
+    author.innerHTML = `${quoteData.author}`;
+    quoteContainer.appendChild(time);
+    quoteContainer.appendChild(quote);
+    quoteContainer.appendChild(author);
+
+    return quoteContainer;
+  },
+  createMementoMoriComponent: () => {
+    const mementoMoriToggle = store.get(MEMENTO_MORI);
+
+    if (!isStoreValueTrue(MEMENTO_MORI)) {
+      return;
+    }
+
+    let mementoMori = document.createElement("div");
+    mementoMori.id = MEMENTO_MORI;
+    mementoMori.className = "widget memento-mori";
+    let mementoMoriHeader = document.createElement("div");
+    mementoMoriHeader.innerHTML = "Memento mori";
+    mementoMoriHeader.id = "memento-mori-header";
+    mementoMori.appendChild(mementoMoriHeader);
+
+    const age = getAgeFromDOB(dob),
+      absoluteAge = parseInt(age);
+
+    for (let i = 0; i < 9; i++) {
+      const yearLine = document.createElement("div");
+      yearLine.className = "year-line";
+      for (let j = 0; j < 10; j++) {
+        const yearElement = document.createElement("div");
+        let year = i * 10 + j;
+
+        if (year < absoluteAge) {
+          yearElement.className = "year dot-fill";
+        } else if (year === absoluteAge) {
+          yearElement.className = "year dot-outline";
+          const currentYear = document.createElement("div");
+          currentYear.className = "current-year";
+          currentYear.style.width = `${parseInt((age - absoluteAge) * 100)}%`;
+          yearElement.appendChild(currentYear);
+        } else {
+          yearElement.className = "year dot-outline";
+        }
+        yearLine.appendChild(yearElement);
+      }
+      mementoMori.appendChild(yearLine);
+    }
+
+    return mementoMori;
+  },
+  createWakaComponent: () => {
+    const wakaUrl = store.get(WAKA);
+    if (!isStoreValueTrue(WAKA_TOGGLE) || !wakaUrl) {
+      return;
+    }
+    let wakaWidget = document.createElement("img");
+    wakaWidget.id = WAKA;
+    wakaWidget.className = "widget waka-widget";
+    wakaWidget.src = wakaUrl;
+
+    return wakaWidget;
+  },
+  createGithubComponent: () => {
+    if (!isStoreValueTrue(GITHUB_TOGGLE)) {
+      return;
+    }
+
+    const githubToggle = store.get(GITHUB_TOGGLE);
+
+    if (!githubToggle) {
+      return;
+    }
+    const githubUsername = store.get(GITHUB);
+    let githubChart = document.createElement("img");
+    githubChart.id = GITHUB;
+    githubChart.className = "github-img";
+    githubChart.src = `http://ghchart.rshah.org/${githubUsername}`;
+
+    return githubChart;
+  },
+  createToggleBtn: (settingData) => {},
+  createToggleBtnComponent: (settingData) => {
+    const elementContainer = document.createElement("div"),
+      toggleComponent = document.createElement("div"),
+      toggleLabel = document.createElement("span"),
+      toggleBtnContainer = document.createElement("label"),
+      toggleInput = document.createElement("input"),
+      toggleSlider = document.createElement("span"),
+      settingToggleValue = store.get(settingData.key);
+
+    elementContainer.id = `${settingData.key}_toggle`;
+    toggleComponent.className = "toggle-component";
+    toggleLabel.innerHTML = settingData.name;
+    toggleBtnContainer.className = "switch";
+    toggleInput.type = "checkbox";
+    toggleInput.checked = settingToggleValue === "true";
+    toggleInput.id = settingData.key;
+
+    toggleInput.addEventListener("change", EventHandler.handleToggleChange);
+    toggleSlider.className = "slider round";
+    toggleBtnContainer.appendChild(toggleInput);
+    toggleBtnContainer.appendChild(toggleSlider);
+    toggleComponent.appendChild(toggleLabel);
+    toggleComponent.appendChild(toggleBtnContainer);
+    elementContainer.appendChild(toggleComponent);
+
+    if (settingToggleValue == "true" && settingData.placeholder) {
+      const inputComponent =
+        ComponenetCreator.createInputComponent(settingData);
+
+      elementContainer.appendChild(inputComponent);
+    }
+    return elementContainer;
+  },
+  createInputComponent: (settingData) => {
+    const inputContainer = document.createElement("div"),
+      inputElementContainer = document.createElement("div"),
+      inputElement = document.createElement("input"),
+      saveBtn = document.createElement("button");
+
+    inputContainer.className = "input-container";
+    saveBtn.innerHTML = "Save";
+    saveBtn.id = `${settingData.valueKey}_btn`;
+    inputElement.id = `${settingData.valueKey}_value`;
+    inputElement.placeholder = settingData.placeholder;
+    inputElement.className = "text-input";
+    inputElement.value = store.get(settingData.valueKey);
+
+    saveBtn.addEventListener("click", EventHandler.handleSaveClick);
+    inputContainer.id = `${settingData.valueKey}_input`;
+
+    inputElementContainer.className = "input-element-container";
+    inputElementContainer.appendChild(inputElement);
+    inputElementContainer.appendChild(saveBtn);
+    inputContainer.appendChild(inputElementContainer);
+    if (settingData.info) {
+      const info = document.createElement("a");
+      info.href = settingData.url;
+      info.innerHTML = settingData.info;
+      info.className = "input-info";
+      inputContainer.appendChild(info);
+    }
+
+    return inputContainer;
+  },
+  createDateInputComponent: (settingData) => {},
+  createSettingsPanelComponent: () => {
+    let settings = document.createElement("div");
+    WIDGET_DATA.forEach((item) => {
+      let settingComponenet;
+
+      if (item.type === "toggle") {
+        settingComponenet = ComponenetCreator.createToggleBtnComponent(item);
+      }
+
+      settings.appendChild(settingComponenet);
+    });
+    return settings;
+  },
+  addInputComponent: (settingData) => {},
+};
+
+// App class
+const App = {
+  renderSettings: async () => {
+    const app = document.getElementById("app"),
+      settingsContainer = document.createElement("div"),
+      settingPanel = document.createElement("div"),
+      closeBtn = document.createElement("img");
+    settings = ComponenetCreator.createSettingsPanelComponent();
+
+    closeBtn.src = "/assets/img/x.svg";
+    closeBtn.className = "close-btn";
+
+    closeBtn.addEventListener("click", EventHandler.handleSettingsClick);
+
+    settingsContainer.id = "settings";
+    settingsContainer.className = "setting-container";
+
+    settingPanel.className = "setting-panel";
+    const settingsHeader = document.createElement("div");
+    settingsHeader.className = "setting-header";
+    settingsHeader.innerHTML = "Settings";
+
+    settingsHeader.appendChild(closeBtn);
+    settingPanel.appendChild(settingsHeader);
+    settingPanel.appendChild(settings);
+    settingsContainer.appendChild(settingPanel);
+
+    app.appendChild(settingsContainer);
+  },
+  renderApp: async () => {
+    let app = document.getElementById("app");
+    let settingsBtn = document.createElement("img");
+    settingsBtn.src = "/assets/img/settings.svg";
+    settingsBtn.className = "setting-btn";
+
+    settingsBtn.addEventListener("click", EventHandler.handleSettingsClick);
+
+    const bgComponent = ComponenetCreator.createBgImageComponent(),
+      quoteContainerComponent = ComponenetCreator.createQuoteComponent();
+
+    let widgetContainer = document.createElement("div");
+    widgetContainer.id = "widget-container";
+
+    // if (wakaComponent) widgetContainer.appendChild(wakaComponent);
+    // if (timelineComponent) widgetContainer.appendChild(timelineComponent);
+    // if (mementoMoriComponent) widgetContainer.appendChild(mementoMoriComponent);
+    // if (githubComponent) sideWidgetContainer.appendChild(githubComponent);
+
+    app.appendChild(settingsBtn);
+    app.appendChild(bgComponent);
+    app.appendChild(widgetContainer);
+    app.appendChild(quoteContainerComponent);
+
+    App.renderWaka();
+    App.renderTimeline();
+    App.renderMementoMori();
+    App.renderGithub();
+    renderTime();
+  },
+  renderWaka: () => {
+    let wakaWidget = ComponenetCreator.createWakaComponent();
+
+    if (wakaWidget)
+      document.getElementById("widget-container").appendChild(wakaWidget);
+  },
+  renderGithub: () => {
+    let githubWidget = ComponenetCreator.createGithubComponent();
+
+    let sideWidgetContainer = document.createElement("div");
+    sideWidgetContainer.id = "side-widget-container";
+
+    if (githubWidget) sideWidgetContainer.appendChild(githubWidget);
+    document
+      .getElementById("widget-container")
+      .appendChild(sideWidgetContainer);
+  },
+  renderTimeline: () => {
+    let timeline = ComponenetCreator.createTimeLineComponent();
+
+    if (timeline)
+      document.getElementById("widget-container").appendChild(timeline);
+  },
+  renderMementoMori: () => {
+    let mementoMori = ComponenetCreator.createMementoMoriComponent();
+
+    if (mementoMori)
+      document.getElementById("widget-container").appendChild(mementoMori);
+  },
+  renderComponentByKey: (key) => {
+    switch (key) {
+      case WAKA:
+        App.renderWaka();
+        break;
+      case TIMELINE:
+        App.renderTimeline();
+        break;
+      case MEMENTO_MORI:
+        App.renderMementoMori();
+        break;
+      case GITHUB:
+        App.renderGithub();
+        break;
+      default:
+        break;
+    }
+  },
+};
+
+const init = () => {
+  store.init();
+  if (store.get("init")) {
+    App.renderApp();
+    // App.renderSettings()
+  } else {
+    // App.renderSettings();
+  }
+  App.renderApp();
+};
+init();
+
+updateAppState();

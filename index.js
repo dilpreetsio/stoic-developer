@@ -10,14 +10,16 @@ const LAST_DATE = "LAST_DATE",
   MONTH = "month",
   YEAR = "year",
   WAKA = "wakatime",
-  WAKA_TOGGLE = "wake_toggle",
+  WAKA_TOGGLE = "waka_toggle",
   TIMELINE = "timeline",
   MEMENTO_MORI = "memento_mori",
+  MEMENTO_MORI_TOGGLE = "memento_mori_toggle",
   GITHUB = "github",
   GITHUB_TOGGLE = "github_toggle";
 
 const WIDGET_DATA = [
   {
+    id: 3,
     name: "Wakatime",
     key: WAKA_TOGGLE,
     type: "toggle",
@@ -28,6 +30,7 @@ const WIDGET_DATA = [
     url: "https://wakatime.com/share/embed",
   },
   {
+    id: 4,
     name: "Github",
     key: GITHUB_TOGGLE,
     valueKey: GITHUB,
@@ -36,14 +39,16 @@ const WIDGET_DATA = [
     placeholder: "Github username",
   },
   {
+    id: 2,
     name: "Memento Mori",
-    key: MEMENTO_MORI,
+    key: MEMENTO_MORI_TOGGLE,
     type: "toggle",
     inputType: "date",
-    placeholder: "Date of birth in YYYY-MM-DD format",
-    valueKey: DOB,
+    placeholder: "Date of birth in DD-MM-YYYY format",
+    valueKey: MEMENTO_MORI,
   },
   {
+    id: 1,
     name: "Timeline",
     key: TIMELINE,
     type: "toggle",
@@ -53,7 +58,7 @@ const WIDGET_DATA = [
 // store management
 const store = {
   init: async () => {
-    updateAppState();
+    await updateAppState();
   },
   get: (key) => {
     return localStorage.getItem(key);
@@ -66,7 +71,7 @@ const store = {
 let currentQuote = store.get(QUOTE),
   currentImage = localStorage.getItem(IMAGE),
   currentDate = localStorage.getItem(LAST_DATE),
-  dob = localStorage.getItem(DOB) || "1994-07-06";
+  dob = localStorage.getItem(MEMENTO_MORI) || "06-07-1994";
 
 // functions
 const fetchImage = async () => {
@@ -77,7 +82,7 @@ const fetchImage = async () => {
       `https://source.unsplash.com/collection/${COLLECTION_ID}/1920x1080/?sig=${Math.random()}`
     );
   } catch (e) {
-    console.log(e);
+    // console.log(e);
   }
   return image.url;
 };
@@ -90,7 +95,7 @@ const fetchQuote = async () => {
       (res) => res.json()
     );
   } catch (e) {
-    console.log(e);
+    // console.log(e);
   }
 
   return quote;
@@ -203,7 +208,7 @@ const addTimeline = (type) => {
   element.appendChild(timePassed);
 };
 
-// state management
+// App updater function
 const updateAppState = async () => {
   let lastDate = store.get(LAST_DATE),
     quote = store.get(QUOTE),
@@ -255,7 +260,9 @@ const EventHandler = {
     }
   },
   handleSaveClick: (e) => {
-    const key = e.currentTarget.id.split("_")[0];
+    let key = e.currentTarget.id;
+    key = key.substring(0, key.lastIndexOf("_"));
+
     const inputValue = document.getElementById(`${key}_value`).value;
 
     store.set(key, inputValue);
@@ -287,7 +294,8 @@ const ComponenetCreator = {
     let timeline = document.createElement("div"),
       timelineData = [DAY, WEEK, MONTH, YEAR];
     timeline.id = TIMELINE;
-    timeline.className = "timeline";
+    timeline.className = "timeline widget padded-widget";
+    timeline.dataset.id = WIDGET_DATA.find((item) => item.key === TIMELINE).id;
 
     timelineData.forEach((type) => {
       let timelineElement = document.createElement("div");
@@ -326,8 +334,7 @@ const ComponenetCreator = {
     return bg;
   },
   createQuoteComponent: () => {
-    const quoteData = JSON.parse(currentQuote);
-
+    const quoteData = JSON.parse(store.get(QUOTE));
     let quoteContainer = document.createElement("div");
     quoteContainer.id = "quote-container";
     let time = document.createElement("h1");
@@ -350,21 +357,24 @@ const ComponenetCreator = {
     return quoteContainer;
   },
   createMementoMoriComponent: () => {
-    const mementoMoriToggle = store.get(MEMENTO_MORI);
-
-    if (!isStoreValueTrue(MEMENTO_MORI)) {
+    if (!isStoreValueTrue(MEMENTO_MORI_TOGGLE)) {
       return;
     }
 
     let mementoMori = document.createElement("div");
     mementoMori.id = MEMENTO_MORI;
-    mementoMori.className = "widget memento-mori";
+    mementoMori.className = "widget padded-widget memento-mori";
     let mementoMoriHeader = document.createElement("div");
     mementoMoriHeader.innerHTML = "Memento mori";
     mementoMoriHeader.id = "memento-mori-header";
+    mementoMori.dataset.id = WIDGET_DATA.find(
+      (item) => item.key === MEMENTO_MORI_TOGGLE
+    ).id;
+
     mementoMori.appendChild(mementoMoriHeader);
 
-    const age = getAgeFromDOB(dob),
+    const dobArray = dob.split("-"),
+      age = getAgeFromDOB(dobArray[2] + "-" + dobArray[1] + "-" + dobArray[0]),
       absoluteAge = parseInt(age);
 
     for (let i = 0; i < 9; i++) {
@@ -399,7 +409,10 @@ const ComponenetCreator = {
     }
     let wakaWidget = document.createElement("img");
     wakaWidget.id = WAKA;
-    wakaWidget.className = "widget waka-widget";
+    wakaWidget.className = "widget padded-widget waka-widget";
+    wakaWidget.dataset.id = WIDGET_DATA.find(
+      (item) => item.valueKey === WAKA
+    ).id;
     wakaWidget.src = wakaUrl;
 
     return wakaWidget;
@@ -487,7 +500,6 @@ const ComponenetCreator = {
 
     return inputContainer;
   },
-  createDateInputComponent: (settingData) => {},
   createSettingsPanelComponent: () => {
     let settings = document.createElement("div");
     WIDGET_DATA.forEach((item) => {
@@ -506,6 +518,16 @@ const ComponenetCreator = {
 
 // App class
 const App = {
+  renderWelcome: async () => {
+    const app = document.getElementById("app"),
+      bgComponent = ComponenetCreator.createBgImageComponent(),
+      quoteContainerComponent = ComponenetCreator.createQuoteComponent();
+
+    app.appendChild(bgComponent);
+    app.appendChild(quoteContainerComponent);
+    App.renderSettings();
+    store.set("init", true);
+  },
   renderSettings: async () => {
     const app = document.getElementById("app"),
       settingsContainer = document.createElement("div"),
@@ -547,61 +569,82 @@ const App = {
     let widgetContainer = document.createElement("div");
     widgetContainer.id = "widget-container";
 
-    // if (wakaComponent) widgetContainer.appendChild(wakaComponent);
-    // if (timelineComponent) widgetContainer.appendChild(timelineComponent);
-    // if (mementoMoriComponent) widgetContainer.appendChild(mementoMoriComponent);
-    // if (githubComponent) sideWidgetContainer.appendChild(githubComponent);
-
     app.appendChild(settingsBtn);
     app.appendChild(bgComponent);
     app.appendChild(widgetContainer);
+    App.renderGithub();
     app.appendChild(quoteContainerComponent);
 
-    App.renderWaka();
-    App.renderTimeline();
-    App.renderMementoMori();
-    App.renderGithub();
+    App.renderWidgets();
+    // App.renderWaka();
+    // App.renderMementoMori();
+    // App.renderTimeline();
     renderTime();
   },
-  renderWaka: () => {
-    let wakaWidget = ComponenetCreator.createWakaComponent();
+  renderWidgets: () => {
+    WIDGET_DATA.forEach((item) => {
+      if (isStoreValueTrue(item.key) && item.key !== GITHUB_TOGGLE) {
+        App.renderComponentByKey(item.valueKey || item.key);
+      }
+    });
+  },
+  renderWidgetInContainer: (widgetComponent, widgetDataKey) => {
+    const widgetContainer = document.getElementById("widget-container"),
+      widgetData = WIDGET_DATA.find((item) => item.key === widgetDataKey);
 
-    if (wakaWidget)
-      document.getElementById("widget-container").appendChild(wakaWidget);
+    if (widgetContainer.children.length > 0) {
+      let index = widgetData.id - 1,
+        previousWidget;
+      while (index > 0) {
+        previousWidget = document.querySelector(`[data-id="${index}"]`);
+        if (previousWidget) {
+          break;
+        }
+        index--;
+      }
+
+      if (index > 0) {
+        previousWidget.parentNode.insertBefore(widgetComponent, previousWidget);
+      } else {
+        widgetContainer.insertBefore(
+          widgetComponent,
+          widgetContainer.firstChild
+        );
+      }
+    } else {
+      widgetContainer.appendChild(widgetComponent);
+    }
   },
   renderGithub: () => {
-    let githubWidget = ComponenetCreator.createGithubComponent();
+    let githubWidget = ComponenetCreator.createGithubComponent(),
+      quoteContainer = document.getElementById("quote-container");
+    app = document.getElementById("app");
 
     let sideWidgetContainer = document.createElement("div");
     sideWidgetContainer.id = "side-widget-container";
 
     if (githubWidget) sideWidgetContainer.appendChild(githubWidget);
-    document
-      .getElementById("widget-container")
-      .appendChild(sideWidgetContainer);
-  },
-  renderTimeline: () => {
-    let timeline = ComponenetCreator.createTimeLineComponent();
 
-    if (timeline)
-      document.getElementById("widget-container").appendChild(timeline);
-  },
-  renderMementoMori: () => {
-    let mementoMori = ComponenetCreator.createMementoMoriComponent();
-
-    if (mementoMori)
-      document.getElementById("widget-container").appendChild(mementoMori);
+    if (quoteContainer) {
+      app.insertBefore(sideWidgetContainer, quoteContainer);
+    } else {
+      app.appendChild(sideWidgetContainer);
+    }
   },
   renderComponentByKey: (key) => {
+    let componentCreator, componentKey;
     switch (key) {
       case WAKA:
-        App.renderWaka();
+        componentCreator = ComponenetCreator.createWakaComponent;
+        componentKey = WAKA_TOGGLE;
         break;
       case TIMELINE:
-        App.renderTimeline();
+        componentCreator = ComponenetCreator.createTimeLineComponent;
+        componentKey = TIMELINE;
         break;
       case MEMENTO_MORI:
-        App.renderMementoMori();
+        componentCreator = ComponenetCreator.createMementoMoriComponent;
+        componentKey = MEMENTO_MORI_TOGGLE;
         break;
       case GITHUB:
         App.renderGithub();
@@ -609,19 +652,17 @@ const App = {
       default:
         break;
     }
+
+    App.renderWidgetInContainer(componentCreator(), componentKey);
   },
 };
 
-const init = () => {
-  store.init();
+const init = async () => {
+  await store.init();
   if (store.get("init")) {
     App.renderApp();
-    // App.renderSettings()
   } else {
-    // App.renderSettings();
+    App.renderWelcome();
   }
-  App.renderApp();
 };
 init();
-
-updateAppState();

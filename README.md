@@ -2,6 +2,8 @@
 
 A simple chrome tab extension for a stoic developer, with features like:
 
+![Alt text](/assets/img/screen.png?raw=true "Screenshot")
+
 - Timelines
 - Memento mori
 - Github wall

@@ -17,6 +17,7 @@ const LAST_DATE = "LAST_DATE",
   GITHUB = "github",
   GITHUB_TOGGLE = "github_toggle";
 
+// widgets data
 const WIDGET_DATA = [
   {
     id: 3,
@@ -73,7 +74,7 @@ let currentQuote = store.get(QUOTE),
   currentDate = localStorage.getItem(LAST_DATE),
   dob = localStorage.getItem(MEMENTO_MORI) || "06-07-1994";
 
-// functions
+// fetch functions
 const fetchImage = async () => {
   let image;
 
@@ -81,9 +82,7 @@ const fetchImage = async () => {
     image = await fetch(
       `https://source.unsplash.com/collection/${COLLECTION_ID}/1920x1080/?sig=${Math.random()}`
     );
-  } catch (e) {
-    // console.log(e);
-  }
+  } catch (e) {}
   return image.url;
 };
 
@@ -94,9 +93,7 @@ const fetchQuote = async () => {
     quote = await fetch("https://api.themotivate365.com/stoic-quote").then(
       (res) => res.json()
     );
-  } catch (e) {
-    // console.log(e);
-  }
+  } catch (e) {}
 
   return quote;
 };
@@ -252,20 +249,25 @@ const EventHandler = {
     if (value) {
       if (settingData.placeholder && settingData.valueKey)
         DomKeeper.addInputComponent(settingData);
-      App.renderComponentByKey(settingData.valueKey || settingData.key);
+      App.renderComponentByKey(settingData);
     } else {
       if (settingData.placeholder)
         DomKeeper.removeElementById(`${settingData.valueKey}_input`);
-      DomKeeper.removeElementById(settingData.valueKey || settingData.key);
+      if (document.getElementById(settingData.valueKey || settingData.key))
+        DomKeeper.removeElementById(settingData.valueKey || settingData.key);
     }
   },
   handleSaveClick: (e) => {
     let key = e.currentTarget.id;
     key = key.substring(0, key.lastIndexOf("_"));
-
+    const settingData = WIDGET_DATA.find((item) => item.valueKey === `${key}`);
     const inputValue = document.getElementById(`${key}_value`).value;
 
+    if (document.getElementById(settingData.valueKey || settingData.key))
+      DomKeeper.removeElementById(settingData.valueKey || settingData.key);
+
     store.set(key, inputValue);
+    App.renderComponentByKey(settingData);
   },
 };
 
@@ -435,7 +437,6 @@ const ComponenetCreator = {
 
     return githubChart;
   },
-  createToggleBtn: (settingData) => {},
   createToggleBtnComponent: (settingData) => {
     const elementContainer = document.createElement("div"),
       toggleComponent = document.createElement("div"),
@@ -476,7 +477,13 @@ const ComponenetCreator = {
       saveBtn = document.createElement("button");
 
     inputContainer.className = "input-container";
-    saveBtn.innerHTML = "Save";
+    saveBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+   <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+   <path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"></path>
+   <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+   <path d="M14 4l0 4l-6 0l0 -4"></path>
+</svg>`;
+    saveBtn.className = "icon-btn";
     saveBtn.id = `${settingData.valueKey}_btn`;
     inputElement.id = `${settingData.valueKey}_value`;
     inputElement.placeholder = settingData.placeholder;
@@ -572,19 +579,15 @@ const App = {
     app.appendChild(settingsBtn);
     app.appendChild(bgComponent);
     app.appendChild(widgetContainer);
-    App.renderGithub();
     app.appendChild(quoteContainerComponent);
 
     App.renderWidgets();
-    // App.renderWaka();
-    // App.renderMementoMori();
-    // App.renderTimeline();
     renderTime();
   },
   renderWidgets: () => {
     WIDGET_DATA.forEach((item) => {
-      if (isStoreValueTrue(item.key) && item.key !== GITHUB_TOGGLE) {
-        App.renderComponentByKey(item.valueKey || item.key);
+      if (isStoreValueTrue(item.key)) {
+        App.renderComponentByKey(item);
       }
     });
   },
@@ -631,8 +634,16 @@ const App = {
       app.appendChild(sideWidgetContainer);
     }
   },
-  renderComponentByKey: (key) => {
+  renderComponentByKey: (item) => {
+    const key = item.valueKey || item.key,
+      itemValue = store.get(key);
+
     let componentCreator, componentKey;
+
+    if (!itemValue) {
+      return;
+    }
+
     switch (key) {
       case WAKA:
         componentCreator = ComponenetCreator.createWakaComponent;
@@ -653,16 +664,36 @@ const App = {
         break;
     }
 
-    App.renderWidgetInContainer(componentCreator(), componentKey);
+    if (componentCreator) {
+      App.renderWidgetInContainer(componentCreator(), componentKey);
+    }
   },
 };
 
+//populate the store for first time
+const initStore = () => {
+  //waka time
+  store.set(WAKA_TOGGLE, false);
+  store.set(WAKA, "");
+
+  // timeline
+  store.set(TIMELINE, true);
+
+  // memento mori
+  store.set(MEMENTO_MORI_TOGGLE, false);
+  store.set(MEMENTO_MORI, `01-01-2000`);
+
+  //github
+  store.set(GITHUB_TOGGLE, false);
+  store.set(GITHUB, "");
+};
+
 const init = async () => {
-  await store.init();
-  if (store.get("init")) {
-    App.renderApp();
-  } else {
-    App.renderWelcome();
+  if (store.get("init") === "false") {
+    initStore();
+    App.renderSettings();
+    store.set("init", true);
   }
+  App.renderApp();
 };
 init();

@@ -1,7 +1,7 @@
 {
   "name": "Stoic developer",
   "description": "A minimal tab for stoic developer",
-  "homepage_url": "https://dilpreetsio.com",
+  "homepage_url": "https://dilpreetsio.com/stoic-developer",
   "version": "1.0.0",
   "manifest_version": 3,
   "icons": {
@@ -13,43 +13,31 @@
   "action": {
     "default_title": "execute.js will run (watch the Chrome DevTools' console)"
   },
-  "chrome_url_overrides" : {
+  "chrome_url_overrides": {
     "newtab": "index.html"
   },
 
   "web_accessible_resources": [
     {
-      "resources": [ "index.js", "src/*" ],
-      "matches": [ "https:\/\/*/*" ]
+      "resources": ["index.js", "src/*"],
+      "matches": ["https://*/*"]
     }
   ],
   "content_scripts": [
     {
-      "run_at" : "document_start",
+      "run_at": "document_start",
       "js": ["before.js"],
-      "matches": [
-        "https:\/\/*/*",
-        "http:\/\/*/*"
-      ]
+      "matches": ["https://*/*", "http://*/*"]
     },
     {
-      "run_at" : "document_idle",
+      "run_at": "document_idle",
       "js": ["after.js"],
-      "matches": [
-        "https:\/\/*/*",
-        "http:\/\/*/*"
-      ]
+      "matches": ["https://*/*", "http://*/*"]
     }
   ],
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": [
-    "tabs",
-    "scripting"
-  ],
-  "host_permissions": [
-    "https://wakatime.com/*",
-    "http://wakatime.com/*"
-  ]
+  "permissions": ["tabs", "scripting"],
+  "host_permissions": ["https://wakatime.com/*", "http://wakatime.com/*"]
 }

@@ -90,8 +90,8 @@ const fetchImage = async () => {
 const fetchQuote = async () => {
   let quote = {};
   try {
-    quote = await fetch("https://api.themotivate365.com/stoic-quote").then(
-      (res) => res.json()
+    quote = await fetch("https://stoic-quotes.com/api/quote").then((data) =>
+      data.json()
     );
   } catch (e) {}
 
@@ -214,6 +214,7 @@ const updateAppState = async () => {
   if (
     !lastDate ||
     !quote ||
+    quote === null ||
     quote.toString() == "{}" ||
     !image ||
     !isSameDate(new Date(), new Date(Date.parse(lastDate)))
@@ -350,7 +351,7 @@ const ComponenetCreator = {
       minute: "numeric",
       hour12: true,
     })}`;
-    quote.innerHTML = `"${quoteData.quote}"`;
+    quote.innerHTML = `"${quoteData.text}"`;
     author.innerHTML = `${quoteData.author}`;
     quoteContainer.appendChild(time);
     quoteContainer.appendChild(quote);
@@ -564,6 +565,14 @@ const App = {
   },
   renderApp: async () => {
     let app = document.getElementById("app");
+    if (
+      store.get(QUOTE) === null ||
+      store.get(IMAGE) === null ||
+      store.get(LAST_DATE) === null
+    ) {
+      updateAppState();
+    }
+
     let settingsBtn = document.createElement("img");
     settingsBtn.src = "/assets/img/settings.svg";
     settingsBtn.className = "setting-btn";
@@ -689,11 +698,13 @@ const initStore = () => {
 };
 
 const init = async () => {
-  if (store.get("init") === "false") {
+  if (store.get("init") === null || store.get("init") === "false") {
     initStore();
     App.renderSettings();
     store.set("init", true);
+    await updateAppState();
   }
   App.renderApp();
 };
+
 init();

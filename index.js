@@ -80,7 +80,7 @@ const fetchImage = async () => {
 
   try {
     image = await fetch(
-      `https://source.unsplash.com/collection/${COLLECTION_ID}/1920x1080/?sig=${Math.random()}`
+      `https://picsum.photos/1920/1080?grayscale`
     );
   } catch (e) {}
   return image.url;
